@@ -1,3 +1,61 @@
+//! # Agavra Codec (Current Best)
+//!
+//! **Strategy:** Combine delta encoding, prefix compression, and type enumeration.
+//!
+//! **Result:** ~190.14 KB with Zstd (~91.4% smaller than naive)
+//!
+//! ## How it works:
+//!
+//! This codec combines the best ideas from multiple approaches:
+//!
+//! ### 1. Type Enumeration
+//! Event types are mapped to single-byte indices (0-13 for 14 types).
+//! The dictionary is stored once at the start, then each event uses 1 byte.
+//!
+//! ### 2. Delta Encoding for Numbers
+//! Instead of storing absolute values, store the difference from previous:
+//! ```text
+//! IDs:        2489651045, 2489651051, 2489651053
+//! Deltas:     2489651045, +6,         +2          (much smaller!)
+//! ```
+//! Uses signed varints so negative deltas are also compact.
+//!
+//! ### 3. Prefix Compression for Strings
+//! Repo names and URLs use prefix encoding (see prefix.rs).
+//! After sorting, consecutive repos often share prefixes.
+//!
+//! ### 4. Timestamp Delta Encoding
+//! All timestamps are within 1 hour. Delta-encoded, most are 0-3 seconds
+//! apart → 1 byte each instead of 24 bytes for ISO 8601 strings.
+//!
+//! ## Data layout:
+//!
+//! ```text
+//! [type_dict][event_count][event1][event2]...
+//!
+//! Each event:
+//! [type_idx: 1 byte]
+//! [id_delta: signed varint]
+//! [repo_id_delta: signed varint]
+//! [repo_name: prefix-encoded string]
+//! [repo_url: prefix-encoded string]
+//! [timestamp_delta: signed varint]
+//! ```
+//!
+//! ## Why this wins (for now):
+//!
+//! - Row-based layout with prefix encoding works well with Zstd
+//! - Delta encoding makes numeric sequences highly compressible
+//! - Type enumeration eliminates repetitive strings
+//! - Sorting maximizes prefix sharing
+//!
+//! ## Room for improvement:
+//!
+//! - repo_url is STILL stored (it's derivable from repo_name!)
+//! - repo_id might be derivable from repo_name dictionary index
+//! - Could use arithmetic coding instead of Zstd
+//! - Bit-packing the type index (4 bits) with other small fields
+
 use bytes::Bytes;
 use std::error::Error;
 

@@ -1,3 +1,46 @@
+//! # Columnar Codec
+//!
+//! **Strategy:** Store data in columns instead of rows, with per-column encoding.
+//!
+//! **Result:** ~200 KB with Zstd (~91% smaller than naive)
+//!
+//! ## How it works:
+//!
+//! Instead of storing events as rows:
+//! ```text
+//! [event1: type, id, repo_id, name, url, ts]
+//! [event2: type, id, repo_id, name, url, ts]
+//! ```
+//!
+//! Store as columns:
+//! ```text
+//! [all event_types] [all ids] [all repo_ids] [all names] [all urls] [all timestamps]
+//! ```
+//!
+//! Each column uses the best encoding for its data type:
+//!
+//! | Column | Encoding | Why |
+//! |--------|----------|-----|
+//! | event_type | RLE (run-length) | Only 14 unique types, long runs after sorting |
+//! | id | Delta | Sequential IDs, small deltas |
+//! | repo_id | Delta | Similar repo IDs cluster together |
+//! | repo_name | Dictionary | 6k unique strings, reference by index |
+//! | repo_url | Dictionary | Same dictionary as name |
+//! | created_at | Delta | Timestamps within 1 hour, tiny deltas |
+//!
+//! ## Why columnar helps:
+//!
+//! - Similar values are adjacent → better compression ratios
+//! - Each column can use optimal encoding for its type
+//! - RLE is extremely efficient for sorted categorical data
+//! - Zstd can find patterns within each column more easily
+//!
+//! ## Room for improvement:
+//!
+//! - repo_url is still stored (could derive from repo_name)
+//! - Dictionary isn't sorted by frequency (common strings get same-size indices)
+//! - Could combine with more aggressive bit-packing
+
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::error::Error;

@@ -1,3 +1,32 @@
+//! # Prefix Codec
+//!
+//! **Strategy:** Sort events, then use prefix compression for strings.
+//!
+//! **Result:** ~202 KB with Zstd (~91% smaller than naive)
+//!
+//! ## How it works:
+//!
+//! 1. **Sort by (event_type, id)** - Groups similar events together
+//! 2. **Prefix encoding for strings** - Store only the suffix that differs
+//!    from the previous value. E.g., if prev="PushEvent" and curr="PushEvent",
+//!    we store (prefix_len=9, suffix="") = just 2 bytes instead of 9.
+//! 3. **Varint encoding** - Numbers use variable-length encoding (small
+//!    numbers = fewer bytes)
+//! 4. **Timestamp as epoch** - Parse ISO 8601 to unix timestamp (8 bytes max
+//!    vs 24 bytes for the string)
+//!
+//! ## Why it helps:
+//!
+//! - Sorted data means consecutive events often share prefixes
+//! - "PushEvent" appears 5000+ times but is mostly stored as "same as before"
+//! - Repo URLs share the "https://api.github.com/repos/" prefix
+//!
+//! ## Room for improvement:
+//!
+//! - Still stores repo.url even though it's derivable from repo.name
+//! - Doesn't delta-encode numeric IDs (just varints)
+//! - Event types could use a dictionary (1 byte) instead of strings
+
 use bytes::Bytes;
 use std::error::Error;
 
