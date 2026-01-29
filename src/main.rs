@@ -5,20 +5,13 @@ use std::io::{BufRead, BufReader};
 
 mod agavra;
 mod codec;
-mod columnar;
-mod compressed;
 mod naive;
-mod prefix;
-mod type_enum;
-mod util;
-mod varint;
+mod zstd;
 
 use agavra::AgavraCodec;
 use codec::EventCodec;
-use columnar::ColumnarCodec;
-use compressed::ZstdCodec;
 use naive::NaiveCodec;
-use prefix::PrefixCodec;
+use zstd::ZstdCodec;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct EventKey {
@@ -123,36 +116,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("│ Codec                  │       Size │ vs Naive   │");
     println!("├────────────────────────┼────────────┼────────────┤");
 
-    // Naive codec (baseline)
-    let encoded = NaiveCodec::encode(&events)?;
-    let baseline = encoded.len();
-    print_row("Naive", encoded.len(), baseline);
-    let decoded = NaiveCodec::decode(&encoded)?;
-    assert_eq!(events, decoded);
+    // Baseline for comparison
+    let naive = NaiveCodec::new();
+    let baseline = naive.encode(&events)?.len();
 
-    // Naive + Zstd
-    let encoded = ZstdCodec::<NaiveCodec>::encode(&events)?;
-    print_row("Naive + Zstd", encoded.len(), baseline);
-    let decoded = ZstdCodec::<NaiveCodec>::decode(&encoded)?;
-    assert_eq!(events, decoded);
+    let codecs: Vec<(Box<dyn EventCodec>, &[(EventKey, EventValue)])> = vec![
+        (Box::new(NaiveCodec::new()), &events),
+        (Box::new(ZstdCodec::new()), &events),
+        (Box::new(AgavraCodec::new()), &sorted_events),
+    ];
 
-    // Prefix + Zstd (example)
-    let encoded = ZstdCodec::<PrefixCodec>::encode(&events)?;
-    print_row("Prefix + Zstd", encoded.len(), baseline);
-    let decoded = ZstdCodec::<PrefixCodec>::decode(&encoded)?;
-    assert_eq!(sorted_events, decoded);
-
-    // Columnar + Zstd (example)
-    let encoded = ZstdCodec::<ColumnarCodec>::encode(&events)?;
-    print_row("Columnar + Zstd", encoded.len(), baseline);
-    let decoded = ZstdCodec::<ColumnarCodec>::decode(&encoded)?;
-    assert_eq!(sorted_events, decoded);
-
-    // Agavra + Zstd (current best)
-    let encoded = ZstdCodec::<AgavraCodec>::encode(&events)?;
-    print_row("agavra", encoded.len(), baseline);
-    let decoded = ZstdCodec::<AgavraCodec>::decode(&encoded)?;
-    assert_eq!(sorted_events, decoded);
+    for (codec, expected) in codecs {
+        let encoded = codec.encode(&events)?;
+        print_row(codec.name(), encoded.len(), baseline);
+        let decoded = codec.decode(&encoded)?;
+        assert_eq!(expected, &decoded);
+    }
 
     println!("└────────────────────────┴────────────┴────────────┘");
     println!("\nAll verifications passed");

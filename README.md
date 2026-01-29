@@ -32,10 +32,11 @@ I supsect the **theoretical minimum is ~150 KB**, which means there's still
 ```bash
 git clone https://github.com/agavra/bit-golf
 cd bit-golf
+gunzip -k data.json.gz  # decompress the dataset
 cargo run --release
 ```
 
-The dataset (`data.json`) is included in the repo — no extra downloads needed.
+The dataset is distributed as `data.json.gz` to keep the repo size manageable.
 
 ## How to Compete
 
