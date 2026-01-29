@@ -67,17 +67,15 @@ fn load_events(path: &str) -> Result<Vec<(EventKey, EventValue)>, Box<dyn Error>
 }
 
 fn format_bytes(bytes: usize) -> String {
-    const KB: f64 = 1024.0;
-    const MB: f64 = KB * 1024.0;
-
-    let bytes_f = bytes as f64;
-    if bytes_f >= MB {
-        format!("{:.2} MB", bytes_f / MB)
-    } else if bytes_f >= KB {
-        format!("{:.2} KB", bytes_f / KB)
-    } else {
-        format!("{} B", bytes)
+    let s = bytes.to_string();
+    let mut result = String::new();
+    for (i, c) in s.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            result.push(',');
+        }
+        result.push(c);
     }
+    result.chars().rev().collect()
 }
 
 fn print_row(name: &str, size: usize, baseline: usize) {
@@ -96,7 +94,7 @@ fn print_row(name: &str, size: usize, baseline: usize) {
     };
 
     println!(
-        "│ {:<22} │ {:>10} │ {:>10} │",
+        "│ {:<22} │ {:>14} │ {:>10} │",
         name,
         format_bytes(size),
         improvement_str
@@ -145,9 +143,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     sorted_events.sort_by(|a, b| a.0.cmp(&b.0));
 
     // Table header
-    println!("┌────────────────────────┬────────────┬────────────┐");
-    println!("│ Codec                  │       Size │ vs Naive   │");
-    println!("├────────────────────────┼────────────┼────────────┤");
+    println!("┌────────────────────────┬────────────────┬────────────┐");
+    println!("│ Codec                  │           Size │ vs Naive   │");
+    println!("├────────────────────────┼────────────────┼────────────┤");
 
     // Baseline for comparison
     let naive = NaiveCodec::new();
@@ -155,7 +153,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let codecs: Vec<(Box<dyn EventCodec>, &[(EventKey, EventValue)])> = vec![
         (Box::new(NaiveCodec::new()), &events),
-        (Box::new(ZstdCodec::new()), &events),
+        (Box::new(ZstdCodec::new(9)), &events),
+        // (Box::new(ZstdCodec::new(22)), &events), // commented out b/c it takes long to run
         (Box::new(AgavraCodec::new()), &sorted_events),
     ];
 
@@ -166,7 +165,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         assert_events_eq(codec.name(), expected, &decoded);
     }
 
-    println!("└────────────────────────┴────────────┴────────────┘");
+    println!("└────────────────────────┴────────────────┴────────────┘");
     println!("\nAll verifications passed");
 
     Ok(())

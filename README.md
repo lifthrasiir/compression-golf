@@ -1,17 +1,17 @@
 # compression-golf
 
-**Can you beat 12.01 MB?**
+**Can you beat 11,917,798 bytes?**
 
 A compression challenge: encode 1,000,000 GitHub events into the smallest possible binary format.
 
 ## Leaderboard
 
-| Rank | Who                                | Size      |
-|------|------------------------------------|-----------|
-| 1    | *[Zstd(22)](src/zstd.rs)*          | 12.01 MB  |
-| 2    | [agavra](src/agavra.rs)            | 13.03 MB  |
-| 3    | [Zstd(9)](src/zstd.rs)             | 17.04 MB  |
-|      | *[Naive (baseline)](src/naive.rs)* | 200.97 MB |
+| Rank | Who                                | Size (Bytes) |
+|------|------------------------------------|--------------|
+| 1    | *[Zstd(22)](src/zstd.rs)*          | 11,917,798   |
+| 2    | [agavra](src/agavra.rs)            | 13,664,824   |
+| 3    | [Zstd(9)](src/zstd.rs)             | 17,869,403   |
+|      | *[Naive (baseline)](src/naive.rs)* | 210,727,389  |
 
 *[Submit a PR](https://github.com/agavra/compression-golf/pulls) to claim your spot!*
 
@@ -21,7 +21,7 @@ Your codec must:
 
 1. Implement the `EventCodec` trait
 2. Perfectly reconstruct the original data (lossless)
-3. Beat the Naive codec (200.97MB)
+3. Beat the Naive codec (210,727,389 bytes)
 
 ## Quick Start
 

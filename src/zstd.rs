@@ -10,22 +10,28 @@ use std::error::Error;
 use crate::codec::EventCodec;
 use crate::{EventKey, EventValue};
 
-pub struct ZstdCodec;
+pub struct ZstdCodec {
+    level: i32,
+    name: String,
+}
 
 impl ZstdCodec {
-    pub fn new() -> Self {
-        Self
+    pub fn new(level: i32) -> Self {
+        Self {
+            level,
+            name: format!("Zstd({})", level),
+        }
     }
 }
 
 impl EventCodec for ZstdCodec {
     fn name(&self) -> &str {
-        "Zstd(9)"
+        &self.name
     }
 
     fn encode(&self, events: &[(EventKey, EventValue)]) -> Result<Bytes, Box<dyn Error>> {
         let json = serde_json::to_vec(events)?;
-        let compressed = zstd::encode_all(json.as_slice(), 9)?;
+        let compressed = zstd::encode_all(json.as_slice(), self.level)?;
         Ok(Bytes::from(compressed))
     }
 
