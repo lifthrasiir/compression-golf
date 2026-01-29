@@ -1,0 +1,71 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test Submissions
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed codecs
+        id: changed
+        run: |
+          # Get list of changed .rs files in src/ (excluding main.rs, codec.rs, lib.rs)
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'src/*.rs' | grep -vE '(main|codec|lib)\.rs$' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No codec files changed"
+            echo "codecs=" >> $GITHUB_OUTPUT
+          else
+            # Extract codec names (filename without .rs extension)
+            CODECS=$(echo "$CHANGED_FILES" | xargs -n1 basename | sed 's/\.rs$//' | tr '\n' ' ')
+            echo "Changed codecs: $CODECS"
+            echo "codecs=$CODECS" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Decompress dataset
+        run: gunzip -k data.json.gz
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Run codec tests
+        run: |
+          CODECS="${{ steps.changed.outputs.codecs }}"
+          if [ -z "$CODECS" ]; then
+            echo "No codec changes detected, running all codecs"
+            cargo run --release
+          else
+            for codec in $CODECS; do
+              echo "Testing codec: $codec"
+              cargo run --release -- --codec "$codec"
+            done
+          fi
+
+      - name: Check formatting
+        run: cargo fmt --check
