@@ -15,8 +15,8 @@ mod naive;
 mod natebrennand;
 mod samsond;
 mod xiangpenghao;
-mod yimingqiao;
 mod xinyuzeng;
+mod yimingqiao;
 mod zstd;
 
 use agavra::AgavraCodec;
@@ -30,8 +30,8 @@ use naive::NaiveCodec;
 use natebrennand::NatebrennandCodec;
 use samsond::SamsondCodec;
 use xiangpenghao::XiangpengHaoCodec;
-use yimingqiao::YimingQiaoCodec;
 use xinyuzeng::XinyuzengCodec;
+use yimingqiao::YimingQiaoCodec;
 use zstd::ZstdCodec;
 
 use crate::fulmicoton::FulmicotonCodec;

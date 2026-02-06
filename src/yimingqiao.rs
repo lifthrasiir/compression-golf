@@ -1123,7 +1123,6 @@ fn invert_preprocess_repo_name(compressed_data: &[u8]) -> Vec<u8> {
     result
 }
 
-
 // ============================================================================
 // rANS (static) for event_id deltas with ESC symbol
 // ============================================================================
@@ -2027,11 +2026,7 @@ fn encode_repo_indices_rans(
             buf.extend_from_slice(&rans_bytes);
             buf.extend_from_slice(&extra);
 
-            if best
-                .as_ref()
-                .map(|b| buf.len() < b.len())
-                .unwrap_or(true)
-            {
+            if best.as_ref().map(|b| buf.len() < b.len()).unwrap_or(true) {
                 best = Some(buf);
             }
         }
@@ -2041,10 +2036,7 @@ fn encode_repo_indices_rans(
 }
 
 #[allow(dead_code)]
-fn decode_repo_indices_rans(
-    bytes: &[u8],
-    total_events: usize,
-) -> Result<Vec<u32>, Box<dyn Error>> {
+fn decode_repo_indices_rans(bytes: &[u8], total_events: usize) -> Result<Vec<u32>, Box<dyn Error>> {
     if bytes.is_empty() {
         return Ok(Vec::new());
     }
@@ -2104,11 +2096,7 @@ fn decode_repo_indices_rans(
 fn build_type_counts(
     type_indices: &[u8],
     num_types: usize,
-) -> (
-    Vec<u64>,
-    Vec<Vec<u64>>,
-    HashMap<(u8, u8), Vec<u64>>,
-) {
+) -> (Vec<u64>, Vec<Vec<u64>>, HashMap<(u8, u8), Vec<u64>>) {
     let mut counts0 = vec![0u64; num_types];
     for &t in type_indices {
         counts0[t as usize] += 1;
@@ -2126,7 +2114,9 @@ fn build_type_counts(
         let prev2 = type_indices[i - 2];
         let prev1 = type_indices[i - 1];
         let cur = type_indices[i] as usize;
-        let entry = counts2.entry((prev2, prev1)).or_insert_with(|| vec![0u64; num_types]);
+        let entry = counts2
+            .entry((prev2, prev1))
+            .or_insert_with(|| vec![0u64; num_types]);
         entry[cur] += 1;
     }
 
@@ -2281,9 +2271,7 @@ fn encode_event_types_rans(
     let mut second_models: Vec<RansModel> = Vec::with_capacity(candidates.len());
     let mut second_map: HashMap<(u8, u8), usize> = HashMap::new();
     for (idx, (ctx, _)) in candidates.iter().enumerate() {
-        let counts = counts2
-            .get(ctx)
-            .ok_or("missing second-order counts")?;
+        let counts = counts2.get(ctx).ok_or("missing second-order counts")?;
         second_models.push(build_model_simple(counts, TYPE_SCALE_BITS));
         second_map.insert(*ctx, idx);
     }
@@ -2439,11 +2427,7 @@ fn encode_timestamps_rans(timestamps: &[i64]) -> Result<Vec<u8>, Box<dyn Error>>
         }
         run_payload = best_run.unwrap_or_default();
 
-        let max_abs = nonzeros
-            .iter()
-            .map(|d| d.abs())
-            .max()
-            .unwrap_or(1);
+        let max_abs = nonzeros.iter().map(|d| d.abs()).max().unwrap_or(1);
         let limit_candidates: [i32; 6] = [4, 8, 16, 32, 64, 128];
         let delta_candidates: [u8; 3] = [10, 11, 12];
         let mut best_delta: Option<Vec<u8>> = None;
@@ -2489,10 +2473,7 @@ fn encode_timestamps_rans(timestamps: &[i64]) -> Result<Vec<u8>, Box<dyn Error>>
     Ok(buf)
 }
 
-fn decode_timestamps_rans(
-    bytes: &[u8],
-    total_events: usize,
-) -> Result<Vec<i64>, Box<dyn Error>> {
+fn decode_timestamps_rans(bytes: &[u8], total_events: usize) -> Result<Vec<i64>, Box<dyn Error>> {
     if bytes.is_empty() {
         return Ok(Vec::new());
     }
@@ -2520,12 +2501,8 @@ fn decode_timestamps_rans(
     let mut nonzeros: Vec<i32> = Vec::new();
     if nonzero_count > 0 {
         let mut run_offset = 0usize;
-        run_lengths = decode_rans_u16_sequence(
-            run_payload,
-            &mut run_offset,
-            nonzero_count,
-            run_alphabet,
-        )?;
+        run_lengths =
+            decode_rans_u16_sequence(run_payload, &mut run_offset, nonzero_count, run_alphabet)?;
         if run_offset != run_payload.len() {
             return Err("run payload length mismatch".into());
         }
@@ -2559,9 +2536,7 @@ fn decode_timestamps_rans(
     timestamps.push(base);
     let mut cur = base;
     for d in deltas {
-        cur = cur
-            .checked_add(d as i64)
-            .ok_or("timestamp overflow")?;
+        cur = cur.checked_add(d as i64).ok_or("timestamp overflow")?;
         timestamps.push(cur);
     }
     Ok(timestamps)
@@ -2575,9 +2550,9 @@ fn encode_event_ids_rans(event_ids: &[u64]) -> Result<Vec<u8>, Box<dyn Error>> {
     let base = event_ids[0];
     let mut deltas = Vec::with_capacity(event_ids.len().saturating_sub(1));
     for i in 1..event_ids.len() {
-        let delta = event_ids[i].checked_sub(event_ids[i - 1]).ok_or(
-            "event_id deltas must be non-negative after sorting",
-        )?;
+        let delta = event_ids[i]
+            .checked_sub(event_ids[i - 1])
+            .ok_or("event_id deltas must be non-negative after sorting")?;
         deltas.push(delta);
     }
 
@@ -2950,8 +2925,10 @@ impl EventCodec for YimingQiaoCodec {
                     repos.push(owners[i].to_string());
                 }
                 0x02 => {
-                    let null_pos =
-                        repo_cursor.iter().position(|&b| b == 0).unwrap_or(repo_cursor.len());
+                    let null_pos = repo_cursor
+                        .iter()
+                        .position(|&b| b == 0)
+                        .unwrap_or(repo_cursor.len());
                     if null_pos >= repo_cursor.len() {
                         return Err("Repo suffix missing terminator".into());
                     }
@@ -2961,8 +2938,10 @@ impl EventCodec for YimingQiaoCodec {
                     repos.push(format!("{}{}", owners[i], remainder_str));
                 }
                 0x00 => {
-                    let null_pos =
-                        repo_cursor.iter().position(|&b| b == 0).unwrap_or(repo_cursor.len());
+                    let null_pos = repo_cursor
+                        .iter()
+                        .position(|&b| b == 0)
+                        .unwrap_or(repo_cursor.len());
                     if null_pos >= repo_cursor.len() {
                         return Err("Repo suffix missing terminator".into());
                     }

@@ -1,6 +1,6 @@
 # compression-golf
 
-**Can you beat 5,188,464 bytes?**
+**Can you beat 5,093,619 bytes?**
 
 A compression challenge: encode 1,000,000 GitHub events into the smallest possible binary format.
 
@@ -14,19 +14,20 @@ This leaderboard uses the `data.json.gz` dataset included in the repo. Use this 
 
 | Rank | Who                                | Size (Bytes) |
 |------|------------------------------------|--------------|
-| 1    | [kjcao](src/kjcao.rs)              | 5,188,464    |
-| 2    | [fulmicoton](src/fulmicoton.rs)    | 5,677,291    |
-| 3    | [xinyuzeng](src/xinyuzeng.rs)      | 5,784,827    |
-| 4    | [cometkim](src/cometkim.rs)        | 5,789,637    |
-| 5    | [natebrennand](src/natebrennand.rs)| 5,996,236    |
-| 6    | [jakedgy](src/jakedgy.rs)          | 6,402,499    |
-| 7    | [hachikuji](src/hachikuji.rs)      | 6,524,516    |
-| 8    | [XiangpengHao](src/xiangpenghao.rs)| 6,847,283    |
-| 9    | [agavra](src/agavra.rs)            | 7,273,680    |
-| 10   | [fabinout](src/fabinout.rs)        | 7,283,778    |
-| 11   | [samsond](src/samsond.rs)          | 7,564,554    |
-| 12   | *[Zstd(22)](src/zstd.rs)*          | 11,917,798   |
-| 13   | *[Zstd(9)](src/zstd.rs)*           | 17,869,403   |
+| 1    | [yimingqiao](src/yimingqiao.rs)    | 5,093,619    |
+| 2    | [kjcao](src/kjcao.rs)              | 5,188,464    |
+| 3    | [fulmicoton](src/fulmicoton.rs)    | 5,677,291    |
+| 4    | [xinyuzeng](src/xinyuzeng.rs)      | 5,784,827    |
+| 5    | [cometkim](src/cometkim.rs)        | 5,789,637    |
+| 6    | [natebrennand](src/natebrennand.rs)| 5,996,236    |
+| 7    | [jakedgy](src/jakedgy.rs)          | 6,402,499    |
+| 8    | [hachikuji](src/hachikuji.rs)      | 6,524,516    |
+| 9    | [XiangpengHao](src/xiangpenghao.rs)| 6,847,283    |
+| 10   | [agavra](src/agavra.rs)            | 7,273,680    |
+| 11   | [fabinout](src/fabinout.rs)        | 7,283,778    |
+| 12   | [samsond](src/samsond.rs)          | 7,564,554    |
+| 13   | *[Zstd(22)](src/zstd.rs)*          | 11,917,798   |
+| 14   | *[Zstd(9)](src/zstd.rs)*           | 17,869,403   |
 |      | *[Naive (baseline)](src/naive.rs)* | 210,727,389  |
 
 ### Evaluation Dataset Leaderboard
