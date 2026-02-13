@@ -208,14 +208,19 @@ impl EventCodec for LifthrasiirCodec {
     }
 
     fn encode(&self, events: &[(EventKey, EventValue)]) -> Result<Bytes, Box<dyn Error>> {
-        // Sort events by key before encoding (to match expected output)
-        let mut sorted_events = events.to_vec();
-        sorted_events.sort_by(|a, b| a.0.cmp(&b.0));
+        // Sort events by key before encoding (to match expected output).
+        // Note that this is not strictly necessary for correctness,
+        // the following code does handle non-monotonic ids just fine.
+        // Comment out and replace `sorted_events` with `events`
+        // in the main `codecs` vector to test with unsorted input.
+        let mut events = events.to_vec();
+        events.sort_by(|a, b| a.0.cmp(&b.0));
+        let events = &events[..];
 
-        let num_events = sorted_events.len();
+        let num_events = events.len();
 
         // Collect data into separate arrays (struct of arrays)
-        let mut id_deltas: Vec<u64> = Vec::with_capacity(num_events);
+        let mut id_deltas: Vec<i64> = Vec::with_capacity(num_events);
         let mut ts_deltas: Vec<i64> = Vec::with_capacity(num_events);
         let mut types: Vec<u8> = Vec::with_capacity(num_events);
         let mut combined_backrefs: Vec<u64> = Vec::with_capacity(num_events);
@@ -225,7 +230,7 @@ impl EventCodec for LifthrasiirCodec {
 
         // Calculate timestamp deltas
         let mut timestamps: Vec<i64> = Vec::with_capacity(num_events);
-        for (_, value) in &sorted_events {
+        for (_, value) in events {
             let ts: chrono::DateTime<Utc> = value.created_at.parse()?;
             timestamps.push(ts.timestamp());
         }
@@ -254,10 +259,10 @@ impl EventCodec for LifthrasiirCodec {
         let mut owner_to_idx: HashMap<&str, u32> = HashMap::new();
         let mut prev_id: u64 = 0;
 
-        for (i, (key, value)) in sorted_events.iter().enumerate() {
+        for (i, (key, value)) in events.iter().enumerate() {
             // ID delta
             let id: u64 = key.id.parse()?;
-            let id_delta = id - prev_id;
+            let id_delta = (id as i64) - (prev_id as i64);
             prev_id = id;
             id_deltas.push(id_delta);
 
@@ -336,8 +341,15 @@ impl EventCodec for LifthrasiirCodec {
         cursor.write_all(&(repo_ids.len() as u32).to_le_bytes())?;
 
         // Section 1: id_delta
+        // For non-positive deltas: signal with 0 byte, then encode -delta as varint
+        // For positive deltas: encode directly as varint
         for id_delta in &id_deltas {
-            write_varint(&mut cursor, *id_delta)?;
+            if *id_delta <= 0 {
+                cursor.write_all(&[0])?;
+                write_varint(&mut cursor, (-*id_delta) as u64)?;
+            } else {
+                write_varint(&mut cursor, *id_delta as u64)?;
+            }
         }
 
         // Section 2: Combined types + ts_delta_low
@@ -397,9 +409,17 @@ impl EventCodec for LifthrasiirCodec {
         let num_new_repos = u32::from_le_bytes(buf) as usize;
 
         // Read Section 1: id_delta
-        let mut id_deltas: Vec<u64> = Vec::with_capacity(num_events);
+        let mut id_deltas: Vec<i64> = Vec::with_capacity(num_events);
         for _ in 0..num_events {
-            id_deltas.push(read_varint(&mut cursor)?);
+            let first = read_varint(&mut cursor)? as i64;
+            if first == 0 {
+                // Non-positive delta: read -delta as varint and negate
+                let neg_delta = read_varint(&mut cursor)? as i64;
+                id_deltas.push(-neg_delta);
+            } else {
+                // Positive delta
+                id_deltas.push(first);
+            }
         }
 
         // Read Section 2+3: Combined types + ts_delta_low
@@ -492,7 +512,7 @@ impl EventCodec for LifthrasiirCodec {
 
         for i in 0..num_events {
             // Reconstruct id
-            let id = prev_id + id_deltas[i];
+            let id = (prev_id as i64 + id_deltas[i]) as u64;
             prev_id = id;
 
             // Reconstruct timestamp
